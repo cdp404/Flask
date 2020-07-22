@@ -13,7 +13,7 @@ app.debug = True
 
 
 db = pymysql.connect(host = 'localhost', port = 3306, user = 'root', passwd='1234',db = 'myflaskapp')
-
+cursor = db.cursor()
 
 #init mysql
 # mysql = MySQL(app)
@@ -49,20 +49,20 @@ def register():
         else:
         # name = form.name.data
             print([name,email,password,re_password,username])
-            cursor = db.cursor()
+            
            
             sql = ''' INSERT INTO users(name, email, username, password) 
-                      VALUES(%s,%s,%s,%s);
+                   VALUES(%s,%s,%s,%s);
                   '''
             cursor.execute(sql,(name,email,username,password))
             db.commit()
             # cursor.execute('SELECT * FROM users;')
             # users = cursor.fetchall()
-            db.close()
             return "register Success"
     else :
-        return"GET Success"
-
+        return render_template('register.html')
+    db.close()
+    
 @app.route("/articles", methods = ['GET', 'POST'])      # GET 형식과 POST 형식 둘 다 적용되게 함
 def articles():
     articles = Articles()
