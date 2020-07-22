@@ -4,7 +4,6 @@
 
 
 from flask import Flask, render_template,flash,redirect,url_for,session,request,logging      # render_template : 요청한 클라이언트에 HTML형식으로 문서화 시켜서 보내는 Class
-from flask_mysqldb import MySQL
 from data import Articles
 import pymysql
 
@@ -12,34 +11,8 @@ import pymysql
 app = Flask(__name__)
 app.debug = True
 
-#config MySQL
-app.config ['MYSQL_HOST'] = 'localhost'
-app.config ['MYSQL_USER'] = 'root'
-app.config ['MYSQL_PASSWORd'] = '1234'
-app.config ['MYSQL_DB'] = 'myflaskapp'
-app.config ['MYSQL_CURSORCLASS']='DictCursor'
 
 db = pymysql.connect(host = 'localhost', port = 3306, user = 'root', passwd='1234',db = 'myflaskapp')
-
-
-
-
-sql_1 = 'SELECT * FROM users;'
-sql_2 = ''' INSERT INTO users(name, email, username, password') 
-        VALUES('Lee','3@naver.com','Lee','1234');
-        '''
-cursor = db.cursor()
-# result = cursor.execute(sql_2)
-# db.commit
-# db.close
-# # users = cursor.fetchall()
-# cursor.execute(sql_1)
-# print(users)
-
-# print('******************',users[0][1],'*******************')
-# print(result)
-
-
 
 
 #init mysql
@@ -61,6 +34,34 @@ def index():
 @app.route("/about")
 def about():
     return render_template("about.html")
+
+@app.route("/register",methods=['GET','Post'])
+def register():
+    if request.method == 'POST':
+        # data = request.body.get('author')
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        re_password = request.form.get('re_password')
+        username = request.form.get('username')
+        if password != re_password:
+            return "Invalid Password"
+        else:
+        # name = form.name.data
+            print([name,email,password,re_password,username])
+            cursor = db.cursor()
+           
+            sql = ''' INSERT INTO users(name, email, username, password) 
+                      VALUES(%s,%s,%s,%s);
+                  '''
+            cursor.execute(sql,(name,email,username,password))
+            db.commit()
+            # cursor.execute('SELECT * FROM users;')
+            # users = cursor.fetchall()
+            db.close()
+            return "register Success"
+    else :
+        return"GET Success"
 
 @app.route("/articles", methods = ['GET', 'POST'])      # GET 형식과 POST 형식 둘 다 적용되게 함
 def articles():
@@ -84,3 +85,4 @@ def article(id):
 if __name__ == "__main__":      # 여길 제일 먼저 실행 (가장 초입에 작성)
     # app.run(host = "0.0.0.0", port = "8080")
     app.run()                   # defalut 값 port = "5000"
+
