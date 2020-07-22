@@ -4,6 +4,7 @@
 
 
 from flask import Flask, render_template,flash,redirect,url_for,session,request,logging      # render_template : 요청한 클라이언트에 HTML형식으로 문서화 시켜서 보내는 Class
+from passlib.hash import pbkdf2_sha256
 from data import Articles
 import pymysql
 
@@ -35,16 +36,21 @@ def index():
 def about():
     return render_template("about.html")
 
+@app.route("/home")
+def home():
+    return render_template("home.html")    
+
 @app.route("/register",methods=['GET','Post'])
 def register():
     if request.method == 'POST':
         # data = request.body.get('author')
         name = request.form.get('name')
         email = request.form.get('email')
-        password = request.form.get('password')
+        password = pbkdf2_sha256.hash(request.form.get('password'))
         re_password = request.form.get('re_password')
         username = request.form.get('username')
-        if password != re_password:
+        if not(pbkdf2_sha256.verify(re_password,password)):
+            print((pbkdf2_sha256.verify(re_password,password)))
             return "Invalid Password"
         else:
         # name = form.name.data
@@ -62,7 +68,32 @@ def register():
     else :
         return render_template('register.html')
     db.close()
-    
+@app.route("/login",methods = ['GET','POST'])
+def login():
+    if request.method == 'POST':
+        id = request.form.get('email')
+        pw = request.form.get('password')
+        
+        sql = 'SELECT * FROM users WHERE email =%s'
+        cursor.execute(sql,[id])
+        users = cursor.fetchone()
+
+
+        pbkdf2_sha256.verify(pw,users[4])
+        if pbkdf2_sha256.verify(pw,users[4]):
+            return redirect(url_for('articles'))
+        else:
+            return redirect(url_for('login'))
+
+        
+
+    else :
+        return render_template(url_for('login'))
+
+
+
+
+
 @app.route("/articles", methods = ['GET', 'POST'])      # GET 형식과 POST 형식 둘 다 적용되게 함
 def articles():
     articles = Articles()
