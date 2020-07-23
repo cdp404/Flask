@@ -64,7 +64,7 @@ def register():
             db.commit()
             # cursor.execute('SELECT * FROM users;')
             # users = cursor.fetchall()
-            return "register Success"
+            return redirect(url_for('home'))
     else :
         return render_template('register.html')
     db.close()
@@ -79,39 +79,59 @@ def login():
         users = cursor.fetchone()
 
 
-        pbkdf2_sha256.verify(pw,users[4])
-        if pbkdf2_sha256.verify(pw,users[4]):
-            return redirect(url_for('articles'))
-        else:
+        if users ==None:
             return redirect(url_for('login'))
-
+        else:
+            if pbkdf2_sha256.verify(pw,users[4] ):
+                return redirect(url_for('articles'))
+            else:
+                return redirect(url_for('login'))
         
-
-    else :
-        return render_template(url_for('login'))
-
-
-
+        return "Success"
+    else:
+        return render_template('login.html')
+    db.close()
 
 
-@app.route("/articles", methods = ['GET', 'POST'])      # GET 형식과 POST 형식 둘 다 적용되게 함
+
+
+
+@app.route("/articles")      
 def articles():
-    articles = Articles()
-    print(len(articles))
+    # articles = Articles()
+    # print(len(articles))
+    sql = 'SELECT * FROM topic;'
+    cursor.execute(sql)
+    articles = cursor.fetchall()
+    print(articles)
+    # return "get success"
     return render_template("articles.html", articles = articles)
 
-@app.route('/test')
-def show_image():
-    return render_template('image.html')
 
 @app.route('/article/<int:id>')
 def article(id):
+    sql = 'SELECT * FROM topic WHERE id = %s'
     print(id)
     articles = Articles()[id-1]
     print(articles)
     return render_template("article.html",data = articles)
     # return 'success'
 
+@app.route('/add_articles',methods=['GET','POST'])  # GET 형식과 POST 형식 둘 다 적용되게 함
+def add_articles():
+    if request.method == 'POST':
+        title = request.form['title']
+        body = request.form['body']
+        author = request.form['author']
+        sql = ''' INSERT INTO topic(title,body,author) 
+                   VALUES(%s,%s,%s);
+                  '''
+        cursor.execute(sql,(title,body,author))
+        db.commit()
+        return redirect('/articles')
+    else :
+        return render_template('add_articles.html')
+    db.close()
 
 if __name__ == "__main__":      # 여길 제일 먼저 실행 (가장 초입에 작성)
     # app.run(host = "0.0.0.0", port = "8080")
