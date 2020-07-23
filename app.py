@@ -110,13 +110,38 @@ def articles():
 
 @app.route('/article/<int:id>')
 def article(id):
+   
+    cursor = db.cursor()
     sql = 'SELECT * FROM topic WHERE id = %s'
-    print(id)
-    articles = Articles()[id-1]
-    print(articles)
-    return render_template("article.html",data = articles)
+    cursor.execute(sql,[id])
+    # articles = Articles()[id-1]
+    topic = cursor.fetchone()
+    print(topic)
+    return render_template("article.html",data = topic)
     # return 'success'
 
+@app.route('/article/<string:id>/edit_article',methods=['GET', 'POST'])
+def edit_article(id):
+    if request.method =="POST":
+        title = request.form['title']
+        body = request.form['body']
+        author = request.form['author']
+        cur = db.cursor()
+        sql = '''
+            UPDATE `topic` SET `title`=%s,`body`=%s, `author`=%s  WHERE  `id`= %s;
+        '''
+        cur.execute(sql , (title,body,author, id ))
+        db.commit()
+        return redirect(url_for('articles'))
+    else:
+        print(id)
+        cur = db.cursor()
+        sql = 'SELECT * FROM topic WHERE id=%s'
+        cur.execute(sql , [id])
+        topic = cur.fetchone()
+        return render_template('edit_article.html', data= topic)
+    db.close()
+    
 @app.route('/add_articles',methods=['GET','POST'])  # GET 형식과 POST 형식 둘 다 적용되게 함
 def add_articles():
     if request.method == 'POST':
@@ -132,6 +157,17 @@ def add_articles():
     else :
         return render_template('add_articles.html')
     db.close()
+
+@app.route('/delete/<string:id>',methods = ['POST'])
+def delete(id):
+    cursor = db.cursor()
+    sql = 'DELETE FROM topic WHERE id=%s'
+    cursor.execute(sql,[id])
+    db.commit()
+    db.close()
+    redirect(url_for('articles'))
+
+
 
 if __name__ == "__main__":      # 여길 제일 먼저 실행 (가장 초입에 작성)
     # app.run(host = "0.0.0.0", port = "8080")
