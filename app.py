@@ -45,22 +45,26 @@ def register():
         password = pbkdf2_sha256.hash(request.form.get('password'))
         re_password = request.form.get('re_password')
         username = request.form.get('username')
-        if not(pbkdf2_sha256.verify(re_password,password)):
-            print((pbkdf2_sha256.verify(re_password,password)))
-            return "Invalid Password"
-        else:
-        # name = form.name.data
-            print([name,email,password,re_password,username])
-            
-           
-            sql = ''' INSERT INTO users(name, email, username, password) 
-                   VALUES(%s,%s,%s,%s);
-                  '''
-            cursor.execute(sql,(name,email,username,password))
-            db.commit()
-            # cursor.execute('SELECT * FROM users;')
-            # users = cursor.fetchall()
-            return redirect(url_for('home'))
+        sql = 'SELECT username FROM users WHERE username = %s'
+        cursor.execute(sql,[username])
+        username_1 = cursor.fetchone()
+        if  username_1:
+            return redirect(url_for('register'))
+        else :
+            if not(pbkdf2_sha256.verify(re_password,password)):
+                print((pbkdf2_sha256.verify(re_password,password)))
+                return "Invalid Password"
+            else:
+            # name = form.name.data
+                print([name,email,password,re_password,username])
+                sql = ''' INSERT INTO users(name, email, username, password) 
+                    VALUES(%s,%s,%s,%s);
+                    '''
+                cursor.execute(sql,(name,email,username,password))
+                db.commit()
+                # cursor.execute('SELECT * FROM users;')
+                # users = cursor.fetchall()
+                return redirect(url_for('login'))
     else :
         return render_template('register.html')
     db.close()
@@ -70,10 +74,10 @@ def register():
 @is_logged_out
 def login():
     if request.method == 'POST':
-        id = request.form.get('email')
+        id = request.form.get('username')
         pw = request.form.get('password')
         
-        sql = 'SELECT * FROM users WHERE email =%s'
+        sql = 'SELECT * FROM users WHERE username = %s'
         cursor.execute(sql,[id])
         users = cursor.fetchone()
 
@@ -84,7 +88,7 @@ def login():
             if pbkdf2_sha256.verify(pw,users[4] ):
                 session['is_logged'] = True
                 session['username'] = users[3]
-                return redirect(url_for('articles'))
+                return redirect('/')
             else:
                 return redirect(url_for('login'))
         
@@ -105,10 +109,19 @@ def is_logged_in(f):
 
     return _wraper
 
-
+def is_admin(f):
+    @wraps(f)
+    def wrap(*args,**kwargs):
+        if session['username']=="ADMIN":
+            return redirect('/admin')
+        else :
+            return f(*args,**kwargs)
+    return wrap
 
 
 @app.route("/")      # decoration : 메소드를 연계하게 해준다. (app.route 경로지정)
+@is_logged_in
+@is_admin
 def index():
     print("World success")
     # session['test'] = "gary kim"
@@ -121,7 +134,6 @@ def index():
 
 @app.route("/about")
 @is_logged_in
-
 def about():
     return render_template("about.html")
 
@@ -209,8 +221,46 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+def is_admined(f):
+    @wraps(f)
+    def wrap(*args,**kwargs):
+        if session['username'] != "ADMIN":
+            return redirect('/')
+        else :
+            return f(*args,**kwargs)
+    return wrap
+
+@app.route('/admin',methods = ['GET','POST'])
+@is_logged_in
+@is_admined
+def admin():
+    sql = 'SELECT * FROM users;'
+    cursor.execute(sql)
+    admin_user = cursor.fetchall()
+    return render_template('admin.html',data=admin_user)
+
+
+@app.route('/user/<string:id>', methods=['GET', 'POST'])
+@is_logged_in
+@is_admined
+def change_level(id):
+    if request.method =='POST':
+        cursor=db.cursor()
+        sql = 'UPDATE `users` SET `auth`=%s WHERE  `id`=%s;'
+        # 
+        auth = request.form['auth']
+        cursor.execute(sql ,[auth,id])
+        return redirect('/')
+    else:
+        cursor=db.cursor()
+        sql = "SELECT * FROM users WHERE id=%s"
+        cursor.execute(sql,[id])
+        user = cursor.fetchone()
+        return render_template('change_level.html', users=user)
+
+
+
 if __name__ == "__main__":      # 여길 제일 먼저 실행 (가장 초입에 작성)
-    # app.run(host = "0.0.0.0", port = "8080")
-    app.secret_key = 'secretkey123456789'
+    app.secret_key = 'secretkey123456789'  # app.run(host = "0.0.0.0", port = "8080")
     app.run()                   # defalut 값 port = "5000"
 
